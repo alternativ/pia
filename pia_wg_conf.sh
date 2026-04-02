@@ -61,7 +61,12 @@ if [ ! -f "$CONF" ]; then
 fi
 
 # === Write final config ===
-cp "$CONF" "$OUTPUT_FILE"
+# Inject DNS after the Address line if not already present
+if ! grep -q '^DNS' "$CONF"; then
+  sed 's/^Address = .*/&\nDNS = 1.1.1.1/' "$CONF" > "$OUTPUT_FILE"
+else
+  cp "$CONF" "$OUTPUT_FILE"
+fi
 
 SERVER_NAME=$(cat "$TMPDIR/pia-hostname" 2>/dev/null | tr -d '[:space:]')
 if [ -n "$SERVER_NAME" ]; then
