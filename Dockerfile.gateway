@@ -1,0 +1,16 @@
+FROM robbinvdh/pia:latest
+
+COPY gateway-entrypoint.sh /gateway-entrypoint.sh
+RUN chmod +x /gateway-entrypoint.sh
+
+# PIA credentials (required at runtime)
+# ENV PIA_USER=
+# ENV PIA_PASS=
+
+# Optional settings
+ENV REGION="" \
+    KILLSWITCH=true \
+    PIA_PF=false \
+    HEALTH_CHECK_INTERVAL=30
+
+ENTRYPOINT ["/gateway-entrypoint.sh"]

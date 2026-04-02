@@ -1,0 +1,25 @@
+FROM alpine:3.21
+
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    jq \
+    ncurses \
+    wireguard-tools \
+    iptables \
+    ip6tables \
+    && git clone https://github.com/pia-foss/manual-connections.git /opt/pia \
+    && chmod +x /opt/pia/*.sh \
+    && apk del git
+
+COPY entrypoint.sh /entrypoint.sh
+COPY patch_scripts.sh /patch_scripts.sh
+RUN chmod +x /entrypoint.sh /patch_scripts.sh && /patch_scripts.sh
+
+ENV PIA_CONNECT=false \
+    PIA_PF=true
+
+WORKDIR /opt/pia
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,52 @@
+services:
+
+  # ----------------------------------------------------------------
+  # VPN gateway — all traffic from dependent containers is tunneled
+  # through PIA WireGuard.  Other containers reference this one via
+  # network_mode: "container:gateway" (or "service:gateway" in
+  # Compose v2 service-level syntax).
+  # ----------------------------------------------------------------
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    image: robbinvdh/pia-gateway:latest
+    container_name: gateway
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE          # needed to load wireguard.ko if not built-in
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.disable_ipv6=1   # disable IPv6 to prevent leaks
+    devices:
+      - /dev/net/tun        # required for wg-quick's tun interaction
+    volumes:
+      - /lib/modules:/lib/modules:ro   # for modprobe wireguard
+    env_file:
+      - .gateway.env        # PIA_USER, PIA_PASS, and any overrides
+    environment:
+      REGION: "de berlin"
+      KILLSWITCH: "true"
+      PIA_PF: "false"
+      HEALTH_CHECK_INTERVAL: "30"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ip", "link", "show", "wg0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------------------
+  # Example: a container that routes all traffic through the gateway.
+  # Replace with your actual service (e.g. qbittorrent, sabnzbd, …).
+  # ----------------------------------------------------------------
+  example-service:
+    image: alpine:3.21
+    container_name: example-service
+    network_mode: "service:gateway"   # shares gateway's network namespace
+    command: ["sh", "-c", "sleep infinity"]
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
